@@ -1,24 +1,34 @@
+package profe;
+
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
 
-public class TCPServer {
+public class TCPServerS {
     private static int PUERTO = 1234;
 
-    public static ServerSocket crearServerSocket(int puerto) throws IOException {
-        return new ServerSocket(puerto);
+    public static SSLServerSocket crearServerSocket(int puerto) throws IOException {
+        SSLServerSocketFactory factory = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
+        SSLServerSocket server = (SSLServerSocket) factory.createServerSocket(PUERTO);
+        //printAvailableCipherSuites(server);
+        return server;
     }
+
 
     public static void main(String args[]) {
 
         BufferedReader entrada;
         PrintWriter salida;
-        ServerSocket server;
+        SSLServerSocket server;
 
         try {
+
+            System.setProperty("javax.net.ssl.keyStore", "./llavesservidor.jks");
+            System.setProperty("javax.net.ssl.keyStorePassword", "pwd123");
 
             // creamos server socket con SSL
             server = crearServerSocket(PUERTO);
@@ -26,7 +36,8 @@ public class TCPServer {
             boolean stop = false;
             while (!stop) {
                 System.out.println("Esperando una conexión...");
-                Socket client = server.accept();
+                SSLSocket client = (SSLSocket) server.accept();
+                //client.setEnabledCipherSuites(client.getSupportedCipherSuites());
 
                 System.out.println("Un cliente se ha conectado...");
                 // Para los canales de entrada y salida de datos
@@ -36,14 +47,22 @@ public class TCPServer {
                 String str = entrada.readLine();
                 System.out.println("Confirmando recepcion de mensaje del cliente:" + str);
                 salida.println(str);
-                // Cerrando la conexión
                 client.close();
             }//while
+            // Cerrando la conexión
             server.close();
         } catch (IOException e) {
             System.out.println("Error de entrada/salida." + e.getMessage());
+            e.printStackTrace();
         }
-
     }//main
+
+    private static void printAvailableCipherSuites(SSLServerSocket ss) {
+        String[] suites = ss.getSupportedCipherSuites();
+        if (suites != null)
+            for (int i = 0; i < suites.length; ++i)
+                System.out.println(suites[i]);
+
+    }
 }
 

@@ -1,19 +1,24 @@
-import javax.net.ssl.SSLSession;
+package profe;
+
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.math.BigInteger;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.*;
 import java.net.UnknownHostException;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 
-public class TCPClientCertS {
+
+public class TCPClientSv2 {
 
     private static String HOST = "localhost";
     private static int PUERTO = 1234;
+    private static String trustStore = "truststore_cliente.jks";
+    private static char trustStorePass[] = "pwd123".toCharArray();
 
     public static void main(String args[]) {
 
@@ -22,29 +27,17 @@ public class TCPClientCertS {
         BufferedReader entrada, teclado;
 
         try {
-
-            System.setProperty("javax.net.ssl.trustStore", "./truststore_cliente.jks");
-            System.setProperty("javax.net.ssl.trustStorePassword", "pwd123");
-            //System.setProperty("javax.net.debug", "all");
-
+            KeyStore ts = KeyStore.getInstance("JKS");
+            ts.load(new FileInputStream(trustStore), trustStorePass);
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(ts);
 
             //Creamos nuestro socket con SSL
-            SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            SSLContext context = SSLContext.getInstance("TLSv1.2");
+            context.init(null, tmf.getTrustManagers(), null);
+            SSLSocketFactory factory = context.getSocketFactory();
             socket = (SSLSocket) factory.createSocket(HOST, PUERTO);
             socket.setEnabledCipherSuites(socket.getSupportedCipherSuites());
-
-            SSLSession session = socket.getSession();
-            Certificate[] cchain = session.getPeerCertificates();
-            System.out.println("Los Certificados usados por el par");
-            for (int i = 0; i < cchain.length; i++) {
-                System.out.println(((X509Certificate) cchain[i]).getSubjectDN());
-            }
-            System.out.println("Host par " + session.getPeerHost());
-            System.out.println("Cifrador " + session.getCipherSuite());
-            System.out.println("Protocolo " + session.getProtocol());
-            System.out.println("ID es " + new BigInteger(session.getId()));
-            System.out.println("Sesion fue creada en " + session.getCreationTime());
-            System.out.println("Sesion fue accedida en " + session.getLastAccessedTime());
 
             teclado = new BufferedReader(new InputStreamReader(System.in));
             entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -67,6 +60,14 @@ public class TCPClientCertS {
         } catch (IOException e) {
             System.out.println("Error de entrada/salida.");
             e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("No existe el algoritmo.");
+        } catch (KeyManagementException e) {
+            System.out.println("Error en manejo de la Llave");
+        } catch (KeyStoreException e) {
+            System.out.println("Error en KeyStore.");
+        } catch (CertificateException e) {
+            System.out.println("Error en Certificado.");
         }
 
     }
